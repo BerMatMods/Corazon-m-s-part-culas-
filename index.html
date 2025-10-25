@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Corazones</title>
+  <title>Tu pesadilla𖤍BerMat_Code𖤍</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Parisienne:wght@400;700&display=swap" rel="stylesheet">
@@ -13,15 +13,88 @@
       overflow: hidden;
       width: 100vw;
       height: 100vh;
-      background: linear-gradient(180deg, #1a0d1a 0%, #2b0f2b 100%);
+      background: #000;
       font-family: 'Parisienne', cursive;
     }
+
+    #previewCanvas {
+      position: fixed;
+      inset: 0;
+      filter: blur(12px) brightness(0.7);
+      opacity: 0.9;
+      z-index: 1;
+    }
+
+    #inicio {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      background: rgba(10, 4, 10, 0.45);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: opacity 1.2s ease, visibility 1.2s ease;
+      pointer-events: all;
+    }
+
+    #inicio h1 {
+      color: #ff99cc;
+      font-size: clamp(2rem, 6vw, 4rem);
+      text-shadow:
+        0 0 12px rgba(255, 153, 204, 0.9),
+        0 0 24px rgba(255, 102, 178, 0.7);
+      margin-bottom: 2rem;
+      text-align: center;
+      z-index: 20;
+    }
+
+    #inicio button {
+      background: rgba(255, 51, 102, 0.35);
+      color: #ffddff;
+      border: 2px solid #ff66cc;
+      padding: 1rem 2.8rem;
+      font-size: clamp(1.3rem, 4.5vw, 2rem);
+      font-family: 'Parisienne', cursive;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      backdrop-filter: blur(6px);
+      z-index: 20;
+      box-shadow: 0 0 20px rgba(255, 102, 204, 0.5);
+    }
+
+    #inicio button:hover {
+      background: rgba(255, 51, 102, 0.55);
+      transform: scale(1.08);
+      box-shadow: 0 0 30px rgba(255, 102, 204, 0.8);
+    }
+
+    .floating-heart {
+      position: absolute;
+      color: rgba(255, 102, 204, 0.3);
+      font-size: clamp(1rem, 3vw, 2rem);
+      z-index: 5;
+      animation: float 15s infinite ease-in-out;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-20vh) rotate(10deg); }
+    }
+
     canvas.webgl {
       position: fixed;
       inset: 0;
       outline: none;
       cursor: grab;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+      z-index: 2;
     }
+
     canvas.webgl:active {
       cursor: grabbing;
     }
@@ -45,6 +118,13 @@
   </style>
 </head>
 <body>
+  <canvas id="previewCanvas"></canvas>
+
+  <div id="inicio">
+    <h1>Corazones para ti 💖</h1>
+    <button id="startBtn">Aplasta acá</button>
+  </div>
+
   <canvas class="webgl"></canvas>
   <div class="creditos">By: 𖤍BerMat_Code𖤍</div>
 
@@ -140,37 +220,83 @@
   <script type="module">
     import * as THREE from "https://cdn.skypack.dev/three@0.135.0";
     import { GLTFLoader } from "https://cdn.skypack.dev/three@0.135.0/examples/jsm/loaders/GLTFLoader";
+    import { TextGeometry } from "https://cdn.skypack.dev/three@0.135.0/examples/jsm/geometries/TextGeometry.js";
+    import { FontLoader } from "https://cdn.skypack.dev/three@0.135.0/examples/jsm/loaders/FontLoader.js";
+
+    const audio = new Audio("https://files.catbox.moe/qcwt9h.mp3");
+    audio.loop = true;
+
+    const inicioScreen = document.getElementById("inicio");
+    const startBtn = document.getElementById("startBtn");
+    const previewCanvas = document.getElementById("previewCanvas");
+
+    function createDecorHearts() {
+      const container = document.body;
+      for (let i = 0; i < 12; i++) {
+        const heart = document.createElement("div");
+        heart.classList.add("floating-heart");
+        heart.innerHTML = "❤";
+        heart.style.left = `${Math.random() * 100}%`;
+        heart.style.top = `${Math.random() * 100}%`;
+        heart.style.animationDelay = `${Math.random() * 15}s`;
+        heart.style.fontSize = `${0.8 + Math.random() * 1.5}rem`;
+        container.appendChild(heart);
+      }
+    }
+    createDecorHearts();
 
     class HeartScene {
-      constructor(canvas) {
+      constructor(canvas, isPreview = false) {
+        this.isPreview = isPreview;
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0a040a);
+        this.scene.background = new THREE.Color(0x000000);
         this.clock = new THREE.Clock();
 
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        this.scene.add(ambientLight);
+
+        this.directionalLight = new THREE.DirectionalLight(0xff66cc, 1);
+        this.directionalLight.position.set(5, 5, 5);
+        this.scene.add(this.directionalLight);
+
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.camera.position.set(0, 0, 4.5);
         this.scene.add(this.camera);
 
-        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x0a040a);
+        this.renderer.setClearColor(0x000000, 0);
 
-        this.rotation = { x: 0, y: 0 };
-        this.isDragging = false;
-        this.previousMouse = { x: 0, y: 0 };
-        this.cameraDistance = 4.5; // distancia inicial
+        if (!isPreview) {
+          this.rotation = { x: 0, y: 0 };
+          this.isDragging = false;
+          this.previousMouse = { x: 0, y: 0 };
+          this.cameraSequence = null;
+          this.sequenceTime = 0;
+          this.orbitMode = false;
+          this.setupControls();
+          this.handleResize();
+        }
 
         this.init();
-        this.animate();
-        this.setupControls();
-        this.handleResize();
+        if (isPreview) {
+          this.renderPreview();
+        } else {
+          this.animate();
+        }
       }
 
       init() {
+        this.mainGroup = new THREE.Group();
+        this.scene.add(this.mainGroup);
+
         this.loadCentralHeart();
-        this.createHeartParticles();   // corazón principal de partículas
-        this.createSparkParticles();   // chispas flotantes en el fondo
+        this.createHeartParticles();
+        this.createFullSkySparks();
+        if (!this.isPreview) {
+          this.createLoveText();
+        }
       }
 
       loadCentralHeart() {
@@ -179,7 +305,7 @@
           "https://assets.codepen.io/74321/heart.glb",
           (gltf) => {
             this.centralHeart = gltf.scene.children[0];
-            this.centralHeart.scale.set(0.25, 0.25, 0.25);
+            this.centralHeart.scale.set(0.25, 0.25, 0.25); // ✅ Escala fija, nunca cambia
             const matcapTexture = new THREE.TextureLoader().load("https://assets.codepen.io/74321/3.png");
             this.centralHeart.material = new THREE.MeshMatcapMaterial({
               matcap: matcapTexture,
@@ -187,15 +313,46 @@
               transparent: true,
               opacity: 1
             });
-            this.scene.add(this.centralHeart);
+            this.mainGroup.add(this.centralHeart);
           },
           undefined,
           (error) => console.error("Error loading central heart:", error)
         );
       }
 
+      createLoveText() {
+        const loader = new FontLoader();
+        loader.load('https://cdn.jsdelivr.net/npm/three@0.135.0/examples/fonts/helvetiker_bold.typeface.json', (font) => {
+          const textGeo = new TextGeometry('TE AMO', {
+            font: font,
+            size: 0.45,
+            height: 0.12,
+            curveSegments: 12,
+            bevelEnabled: true,
+            bevelThickness: 0.04,
+            bevelSize: 0.03,
+            bevelSegments: 5
+          });
+
+          textGeo.center();
+          const textMaterial = new THREE.MeshPhongMaterial({
+            color: 0xff3366,
+            emissive: 0xff66cc,
+            emissiveIntensity: 0.5,
+            specular: 0xffffff,
+            shininess: 120,
+            transparent: true,
+            opacity: 0.98
+          });
+
+          this.loveText = new THREE.Mesh(textGeo, textMaterial);
+          this.loveText.position.y = 1.25; // ✅ Posición fija
+          this.mainGroup.add(this.loveText);
+        });
+      }
+
       createHeartParticles() {
-        const count = 4500; // ↑ más partículas
+        const count = this.isPreview ? 1500 : 4500;
         const geometry = new THREE.InstancedBufferGeometry();
         const baseGeo = new THREE.PlaneGeometry(1, 1);
         Object.keys(baseGeo.attributes).forEach(key => {
@@ -214,7 +371,7 @@
           const i3 = i * 3;
           randoms[i] = Math.random();
           randoms1[i] = Math.random();
-          scales[i] = Math.random() * 0.35;
+          scales[i] = Math.random() * (this.isPreview ? 0.2 : 0.35);
           const color = new THREE.Color(colorChoices[Math.floor(Math.random() * colorChoices.length)]);
           colors[i3] = color.r;
           colors[i3 + 1] = color.g;
@@ -232,8 +389,8 @@
           vertexShader: document.getElementById("vertexShader").textContent,
           fragmentShader: document.getElementById("fragmentShader").textContent,
           uniforms: {
-            uTime: { value: 0 },
-            uSize: { value: 0.22 }
+            uTime: { value: this.isPreview ? 5 : 0 },
+            uSize: { value: this.isPreview ? 0.18 : 0.22 }
           },
           depthWrite: false,
           blending: THREE.AdditiveBlending,
@@ -241,70 +398,60 @@
         });
 
         this.particleHeart = new THREE.Mesh(geometry, heartMaterial);
-        this.scene.add(this.particleHeart);
+        this.mainGroup.add(this.particleHeart);
       }
 
-      createSparkParticles() {
-        const count = 800; // ↑ más chispas
-        const geometry = new THREE.InstancedBufferGeometry();
-        const baseGeo = new THREE.PlaneGeometry(1, 1);
-        Object.keys(baseGeo.attributes).forEach(key => {
-          geometry.setAttribute(key, baseGeo.attributes[key]);
-        });
-        geometry.index = baseGeo.index;
-
-        const scales = new Float32Array(count);
+      createFullSkySparks() {
+        const count = this.isPreview ? 800 : 2500;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(count * 3);
         const colors = new Float32Array(count * 3);
-        const phis = new Float32Array(count);
-        const randoms = new Float32Array(count);
-        const randoms1 = new Float32Array(count);
         const colorChoices = [0xff66cc, 0xff99ff, 0xffccff, 0xffffff];
 
         for (let i = 0; i < count; i++) {
           const i3 = i * 3;
-          phis[i] = (Math.random() - 0.5) * 10;
-          randoms[i] = Math.random();
-          randoms1[i] = Math.random();
-          scales[i] = Math.random() * 0.35;
+          const radius = 30 + Math.random() * 50;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+          positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+          positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+          positions[i3 + 2] = radius * Math.cos(phi);
+
           const color = new THREE.Color(colorChoices[Math.floor(Math.random() * colorChoices.length)]);
           colors[i3] = color.r;
           colors[i3 + 1] = color.g;
           colors[i3 + 2] = color.b;
         }
 
-        geometry.setAttribute("aScale", new THREE.InstancedBufferAttribute(scales, 1));
-        geometry.setAttribute("aColor", new THREE.InstancedBufferAttribute(colors, 3));
-        geometry.setAttribute("phi", new THREE.InstancedBufferAttribute(phis, 1));
-        geometry.setAttribute("random", new THREE.InstancedBufferAttribute(randoms, 1));
-        geometry.setAttribute("random1", new THREE.InstancedBufferAttribute(randoms1, 1));
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-        const sparkMaterial = new THREE.ShaderMaterial({
-          vertexShader: document.getElementById("vertexShaderSparks").textContent,
-          fragmentShader: document.getElementById("fragmentShaderSparks").textContent,
-          uniforms: {
-            uTime: { value: 0 },
-            uSize: { value: 0.32 },
-            uTex: { value: new THREE.TextureLoader().load("https://assets.codepen.io/74321/heart.png") }
-          },
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-          transparent: true
+        const sparkMaterial = new THREE.PointsMaterial({
+          size: this.isPreview ? 0.08 : 0.12,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.85,
+          blending: THREE.AdditiveBlending
         });
 
-        this.sparkParticles = new THREE.Mesh(geometry, sparkMaterial);
-        this.sparkParticles.position.z = -8; // enviar al fondo
-        this.scene.add(this.sparkParticles);
+        this.skySparks = new THREE.Points(geometry, sparkMaterial);
+        this.scene.add(this.skySparks);
+      }
+
+      renderPreview() {
+        this.renderer.render(this.scene, this.camera);
       }
 
       setupControls() {
         const canvas = this.renderer.domElement;
 
-        // Rotación con arrastre
         const onMouseDown = (e) => {
           this.isDragging = true;
           this.previousMouse.x = e.clientX;
           this.previousMouse.y = e.clientY;
           canvas.style.cursor = 'grabbing';
+          this.cameraSequence = null;
+          this.orbitMode = false;
         };
 
         const onMouseMove = (e) => {
@@ -323,14 +470,15 @@
           canvas.style.cursor = 'grab';
         };
 
-        // Zoom con rueda
         const onWheel = (e) => {
-          e.preventDefault();
-          this.cameraDistance += e.deltaY * 0.005;
-          this.cameraDistance = Math.max(1.5, Math.min(12, this.cameraDistance));
+          // No permitimos zoom manual durante la secuencia, pero sí después
+          if (!this.cameraSequence && !this.orbitMode) {
+            const zoomSpeed = 0.005;
+            const newZ = this.camera.position.z + e.deltaY * zoomSpeed;
+            this.camera.position.z = Math.max(1.5, Math.min(30, newZ));
+          }
         };
 
-        // Toque móvil
         const onTouchStart = (e) => {
           if (e.touches.length === 1) {
             this.isDragging = true;
@@ -364,35 +512,94 @@
         canvas.addEventListener('touchend', onTouchEnd);
       }
 
-      animate = () => {
-        requestAnimationFrame(this.animate);
-        const elapsedTime = this.clock.getElapsedTime();
+      startCinematicSequence() {
+        this.cameraSequence = 'zoomOut';
+        this.sequenceTime = 0;
+        this.orbitMode = false;
+      }
 
-        if (!this.isDragging) {
-          this.rotation.y += 0.002;
-        }
+      updateCameraSequence(delta) {
+        this.sequenceTime += delta;
 
-        // Aplicar rotación
-        if (this.centralHeart) {
-          this.centralHeart.rotation.x = this.rotation.x;
-          this.centralHeart.rotation.y = this.rotation.y;
-        }
-        if (this.particleHeart) {
-          this.particleHeart.rotation.x = this.rotation.x;
-          this.particleHeart.rotation.y = this.rotation.y;
-          if (this.particleHeart.material.uniforms) {
-            this.particleHeart.material.uniforms.uTime.value = elapsedTime;
+        if (this.cameraSequence === 'zoomOut') {
+          // Alejarse mucho: de 4.5 a 35 (4 segundos)
+          if (this.sequenceTime < 4) {
+            const t = this.sequenceTime / 4;
+            this.camera.position.z = 4.5 + (35 - 4.5) * t;
+          } else {
+            this.cameraSequence = 'zoomToText';
+            this.sequenceTime = 0;
           }
         }
-        if (this.sparkParticles && this.sparkParticles.material.uniforms) {
-          this.sparkParticles.material.uniforms.uTime.value = elapsedTime;
+        else if (this.cameraSequence === 'zoomToText') {
+          // Acercarse al texto: de 35 a 2.8 (3 segundos)
+          if (this.sequenceTime < 3) {
+            const t = this.sequenceTime / 3;
+            this.camera.position.z = 35 - (35 - 2.8) * t;
+          } else {
+            this.cameraSequence = 'showHeart';
+            this.sequenceTime = 0;
+          }
+        }
+        else if (this.cameraSequence === 'showHeart') {
+          // Alejarse un poco para ver todo: de 2.8 a 7 (2.5 segundos)
+          if (this.sequenceTime < 2.5) {
+            const t = this.sequenceTime / 2.5;
+            this.camera.position.z = 2.8 + (7 - 2.8) * t;
+          } else {
+            this.cameraSequence = 'return';
+            this.sequenceTime = 0;
+          }
+        }
+        else if (this.cameraSequence === 'return') {
+          // Regresar a posición inicial: de 7 a 4.5 (2 segundos)
+          if (this.sequenceTime < 2) {
+            const t = this.sequenceTime / 2;
+            this.camera.position.z = 7 - (7 - 4.5) * t;
+          } else {
+            this.cameraSequence = null;
+            this.orbitMode = true;
+            return;
+          }
         }
 
-        // Aplicar zoom
-        this.camera.position.z = this.cameraDistance;
-        this.camera.lookAt(this.scene.position);
+        this.camera.lookAt(0, 0, 0);
+      }
+
+      animate = () => {
+        const delta = Math.min(this.clock.getDelta(), 0.1);
+        const elapsedTime = this.clock.getElapsedTime();
+
+        if (this.cameraSequence) {
+          this.updateCameraSequence(delta);
+        }
+
+        if (this.isDragging) {
+          this.mainGroup.rotation.x = this.rotation.x;
+          this.mainGroup.rotation.y = this.rotation.y;
+        } else {
+          if (this.orbitMode) {
+            // Órbita suave: rotación automática del grupo
+            this.mainGroup.rotation.y += 0.0025;
+          }
+          // Si no hay órbita ni secuencia, rotación mínima suave
+          else if (!this.cameraSequence) {
+            this.mainGroup.rotation.y += 0.001;
+          }
+        }
+
+        if (!this.cameraSequence && !this.orbitMode && !this.isDragging) {
+          this.camera.position.z = 4.5;
+        }
+
+        this.camera.lookAt(0, 0, 0);
+
+        if (this.particleHeart && this.particleHeart.material.uniforms) {
+          this.particleHeart.material.uniforms.uTime.value = elapsedTime;
+        }
 
         this.renderer.render(this.scene, this.camera);
+        requestAnimationFrame(this.animate);
       };
 
       handleResize() {
@@ -404,8 +611,27 @@
       }
     }
 
-    const canvas = document.querySelector("canvas.webgl");
-    new HeartScene(canvas);
+    window.addEventListener("load", () => {
+      new HeartScene(previewCanvas, true);
+    });
+
+    let heartScene;
+
+    startBtn.addEventListener("click", () => {
+      audio.play().catch(e => console.warn("Autoplay blocked:", e));
+
+      inicioScreen.style.opacity = "0";
+      inicioScreen.style.pointerEvents = "none";
+
+      const mainCanvas = document.querySelector("canvas.webgl");
+      mainCanvas.style.opacity = "1";
+
+      heartScene = new HeartScene(mainCanvas);
+
+      setTimeout(() => {
+        if (heartScene) heartScene.startCinematicSequence();
+      }, 600);
+    });
   </script>
 </body>
 </html>
